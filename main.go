@@ -11,6 +11,7 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/mucyomiller/ontimeworker/common"
 	"github.com/mucyomiller/ontimeworker/enqueue"
+	"github.com/mucyomiller/ontimeworker/processor"
 	log "github.com/sirupsen/logrus"
 	"github.com/unrolled/render"
 )
@@ -37,7 +38,10 @@ func main() {
 
 	// getting server port
 	serverPort := common.Getenv("SERVER_PORT", ":8080")
+	// spinning up jobProcessor
+	go processor.StartJobProcessor()
 	// starting http server with graceful restart
+	log.Info("Starting web server to accept submitted job")
 	err := gracehttp.Serve(&http.Server{Addr: serverPort, Handler: r})
 	if err != nil {
 		log.Errorf("Server Error %v", err)
