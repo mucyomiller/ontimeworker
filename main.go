@@ -24,7 +24,7 @@ var rs = render.New()
 
 func main() {
 
-	// configure router to handler incomming job request
+	// configure router to handler incoming job request
 	r := chi.NewRouter()
 	r.Use(middleware.DefaultCompress)
 	r.Use(middleware.StripSlashes)
