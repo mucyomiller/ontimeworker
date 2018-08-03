@@ -16,15 +16,15 @@ import (
 	"github.com/unrolled/render"
 )
 
-// Q job Queue
+// Q job Queue.
 type Q map[string]interface{}
 
-// Initialize render
+// Initialize render.
 var rs = render.New()
 
 func main() {
 
-	// configure router to handler incoming job request
+	// configure router to handler incoming job request.
 	r := chi.NewRouter()
 	r.Use(middleware.DefaultCompress)
 	r.Use(middleware.StripSlashes)
@@ -33,14 +33,14 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	// routes
+	// routes.
 	r.Post("/jobs/create", handleJob)
 
-	// getting server port
+	// getting server port.
 	serverPort := common.Getenv("SERVER_PORT", ":8080")
-	// spinning up jobProcessor
+	// spinning up jobProcessor.
 	go processor.StartJobProcessor()
-	// starting http server with graceful restart
+	// starting http server with graceful restart.
 	log.Info("Starting web server to accept submitted job")
 	err := gracehttp.Serve(&http.Server{Addr: serverPort, Handler: r})
 	if err != nil {
@@ -55,15 +55,15 @@ func handleJob(w http.ResponseWriter, r *http.Request) {
 	reqID := middleware.GetReqID(ctx)
 	log.Infof("we got a request with ID: %v", reqID)
 
-	// retreiving data from http payload
+	// retreiving data from http payload.
 	transactionID := strings.TrimSpace(r.FormValue("transactionId"))
 
-	// forming job map[string]interface{}
+	// forming job map[string]interface{}.
 	tx := Q{
 		"transactionId": transactionID,
 	}
 
-	// Enqueue job tx to worker
+	// Enqueue job tx to worker.
 	ok, err := enqueue.Enqueue(tx)
 	if err != nil {
 		log.Errorf("Error occured while enqueuing job %v ", err)

@@ -17,7 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Havanao response status codes
+// Havanao response status codes.
 // See: https://havanao.com/docs/1.0/sales-request#purchase-status
 const (
 	StatusApproved  = "APPROVED"
@@ -26,14 +26,14 @@ const (
 	StatusUnknown   = "UNKNOWN"
 )
 
-// Initialise Env variables
+// Initialise Env variables.
 var redisPort = common.Getenv("REDIS_PORT", ":6379")
 var paymentURL = common.Getenv("PAYMENT_URL", " ")
 var momoToken = common.Getenv("HAVANAO_KEY", " ")
 var webhookURL = common.Getenv("WEBHOOK", " ")
 var ourServiceKey = common.Getenv("OUR_SERVICE_KEY", " ")
 
-// http client configs
+// http client configs.
 var netTransport = &http.Transport{
 	Dial: (&net.Dialer{
 		Timeout: 10 * time.Second,
@@ -46,7 +46,7 @@ var httpClient = &http.Client{
 	Transport: netTransport,
 }
 
-// Make a redis pool
+// Make a redis pool.
 var redisPool = &redis.Pool{
 	MaxActive: 5,
 	MaxIdle:   5,
@@ -56,10 +56,10 @@ var redisPool = &redis.Pool{
 	},
 }
 
-// Context custom context
+// Context custom context.
 type Context struct{}
 
-// Havanao API response struct
+// Havanao API response struct.
 type Havanao struct {
 	Code              int64  `json:"code"`
 	Status            string `json:"status"`
@@ -68,41 +68,41 @@ type Havanao struct {
 	Description       string `json:"description"`
 }
 
-// StartJobProcessor process submit tasks
+// StartJobProcessor process submit tasks.
 func StartJobProcessor() {
 	// Make a new pool. Arguments:
 	// Context{} is a struct that will be the context for the request.
-	// 10 is the max concurrency
-	// "ontimepaymentservice" is the Redis namespace
-	// redisPool is a Redis pool
+	// 10 is the max concurrency.
+	// "ontimepaymentservice" is the Redis namespace.
+	// redisPool is a Redis pool.
 	pool := work.NewWorkerPool(Context{}, 10, "ontimepaymentservice", redisPool)
 
-	// Add middleware that will be executed for each job
+	// Add middleware that will be executed for each job.
 	pool.Middleware((*Context).Log)
 
-	// Map the name of jobs to handler functions
+	// Map the name of jobs to handler functions.
 	pool.Job("validate_transaction", (*Context).CheckTransaction)
 
-	// Start processing jobs
+	// Start processing jobs.
 	pool.Start()
 	log.Info("Starting Job Processor to process submitted tasks")
-	// Wait for a signal to quit:
+	// Wait for a signal to quit.
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, os.Kill)
 	<-signalChan
 
-	// Stop the pool
+	// Stop the pool.
 	pool.Stop()
 }
 
-// Log middleware to log each started job
+// Log middleware to log each started job.
 func (c *Context) Log(job *work.Job, next work.NextMiddlewareFunc) error {
 	log.Infof("Starting job: ", job.Name)
 	return next()
 }
 
 // CheckTransaction pull work in queue and checks it against
-// momo payment processor server
+// momo payment processor server.
 func (c *Context) CheckTransaction(job *work.Job) error {
 	// Extract arguments:
 	tx := job.ArgString("transactionId")
@@ -110,7 +110,7 @@ func (c *Context) CheckTransaction(job *work.Job) error {
 		return err
 	}
 
-	// checking transaction id against momo processor[havanao]
+	// checking transaction id against momo processor[havanao].
 	resp, err := httpClient.Get(paymentURL + "?transactionId=" + tx + "&api_token=" + momoToken)
 	if err != nil {
 		return err
@@ -118,7 +118,7 @@ func (c *Context) CheckTransaction(job *work.Job) error {
 
 	havanao := &Havanao{}
 	defer resp.Body.Close()
-	// Decode resp body directly into Havanao struct
+	// Decode resp body directly into Havanao struct.
 	json.NewDecoder(resp.Body).Decode(havanao)
 
 	// b, err := json.Marshal(havanao)
@@ -127,11 +127,11 @@ func (c *Context) CheckTransaction(job *work.Job) error {
 	// }
 	// log.Infof("completed transaction Id %v : result %v:", tx, string(b))
 	if havanao.TransactionStatus == StatusApproved {
-		// WebHook and notify transaction successful completed
+		// WebHook and notify transaction successful completed.
 		payload := []byte(fmt.Sprintf(`{"transaction_id":%q,"status":"success"}`, tx))
 		req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(payload))
 		if err != nil {
-			// return error so that worker will retry again
+			// return error so that worker will retry again.
 			log.Error("malformed payload or webhook url")
 			return err
 		}
@@ -139,7 +139,7 @@ func (c *Context) CheckTransaction(job *work.Job) error {
 		req.Header.Set("Content-Type", "application/json")
 		rsp, err := httpClient.Do(req)
 		if err != nil {
-			// return error so that worker will retry again
+			// return error so that worker will retry again.
 			log.Error("submitting worker result to ontimservice webhook failed")
 			return err
 		}

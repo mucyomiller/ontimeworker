@@ -8,7 +8,7 @@ import (
 
 var redisPort = common.Getenv("REDIS_PORT", ":6379")
 
-// Make a redis pool
+// Make a redis pool.
 var redisPool = &redis.Pool{
 	MaxActive: 5,
 	MaxIdle:   5,
@@ -18,10 +18,10 @@ var redisPool = &redis.Pool{
 	},
 }
 
-// Make an enqueuer with a particular namespace
+// Make an enqueuer with a particular namespace.
 var enqueuer = work.NewEnqueuer("ontimepaymentservice", redisPool)
 
-// Enqueue method used to created job in worker pool
+// Enqueue method used to created job in worker pool.
 func Enqueue(tx map[string]interface{}) (bool, error) {
 	// Enqueue a job named "validate_transaction" with the specified parameters.
 	_, err := enqueuer.Enqueue("validate_transaction", tx)
