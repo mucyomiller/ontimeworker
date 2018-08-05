@@ -31,7 +31,6 @@ var redisPort = common.Getenv("REDIS_PORT", ":6379")
 var paymentURL = common.Getenv("PAYMENT_URL", " ")
 var momoToken = common.Getenv("HAVANAO_KEY", " ")
 var webhookURL = common.Getenv("WEBHOOK", " ")
-var ourServiceKey = common.Getenv("OUR_SERVICE_KEY", " ")
 
 // http client configs.
 var netTransport = &http.Transport{
@@ -135,7 +134,6 @@ func (c *Context) CheckTransaction(job *work.Job) error {
 			log.Error("malformed payload or webhook url")
 			return err
 		}
-		req.Header.Set("X-Custom-Header", ourServiceKey)
 		req.Header.Set("Content-Type", "application/json")
 		rsp, err := httpClient.Do(req)
 		if err != nil {
